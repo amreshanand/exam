@@ -123,8 +123,8 @@ export const fetchNews = async (query = 'space', apiKey) => {
     try {
       res = await axios.get(url);
     } catch {
-      const proxyRes = await axios.get(`${PROXY_URL}${encodeURIComponent(url)}`);
-      res = { data: JSON.parse(proxyRes.data.contents) };
+      const data = await proxyFetch(url);
+      res = { data };
     }
 
     const results = res.data.articles || res.data.results || [];
