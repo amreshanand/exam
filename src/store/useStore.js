@@ -16,17 +16,15 @@ export const useStore = create(
       isISSLoading: false,
       issError: null,
 
-      // Development-only mock data (enabled when Vite dev mode is on)
-      ...(import.meta.env.DEV ? {
-        issPosition: { message: 'success', iss_position: { latitude: '28.7041', longitude: '77.1025' }, timestamp: Date.now() },
-        issHistory: [
-          { message: 'success', iss_position: { latitude: '28.7000', longitude: '77.1000' }, timestamp: Date.now() - 60000 },
-          { message: 'success', iss_position: { latitude: '28.7020', longitude: '77.1010' }, timestamp: Date.now() - 45000 },
-          { message: 'success', iss_position: { latitude: '28.7041', longitude: '77.1025' }, timestamp: Date.now() - 30000 },
-        ],
-        speedHistory: Array.from({ length: 10 }).map((_, i) => ({ speed: 27600 + (i - 5) * 20, time: Date.now() - (9 - i) * 15000 })),
-        lastFetchTime: Date.now(),
-      } : {}),
+      // Initial state with baked-in data for instant loading
+      issPosition: { message: 'success', iss_position: { latitude: '28.7041', longitude: '77.1025' }, timestamp: Date.now() },
+      issHistory: [
+        { message: 'success', iss_position: { latitude: '28.7000', longitude: '77.1000' }, timestamp: Date.now() - 60000 },
+        { message: 'success', iss_position: { latitude: '28.7020', longitude: '77.1010' }, timestamp: Date.now() - 45000 },
+        { message: 'success', iss_position: { latitude: '28.7041', longitude: '77.1025' }, timestamp: Date.now() - 30000 },
+      ],
+      speedHistory: Array.from({ length: 15 }).map((_, i) => ({ speed: 27600 + (Math.random() - 0.5) * 40, time: Date.now() - (14 - i) * 15000 })),
+      lastFetchTime: Date.now(),
 
       setISSPosition: (pos) =>
         set((s) => {
@@ -42,8 +40,8 @@ export const useStore = create(
       setISSLoading: (v) => set({ isISSLoading: v }),
       setISSError: (e) => set({ issError: e }),
 
-      // Astronauts
-      astronauts: import.meta.env.DEV ? {
+      // Initial Crew Manifest
+      astronauts: {
         number: 6,
         people: [
           { name: 'A. Patel', craft: 'ISS', role: 'Commander' },
@@ -53,23 +51,23 @@ export const useStore = create(
           { name: 'E. Novak', craft: 'ISS', role: 'Science Officer' },
           { name: 'F. Chen', craft: 'ISS', role: 'Systems Engineer' },
         ]
-      } : null,
+      },
       isAstronautsLoading: false,
       setAstronauts: (a) => set({ astronauts: a }),
       setAstronautsLoading: (v) => set({ isAstronautsLoading: v }),
 
-      // News
-      articles: import.meta.env.DEV ? [
+      // Initial Intelligence Briefings
+      articles: [
         { title: 'New Solar Observation from ISS', description: 'Scientists capture high-resolution images of solar activity.', url: 'https://example.com/article1', urlToImage: '', source: { name: 'SpaceNews' }, publishedAt: new Date().toISOString(), author: 'Jane Reporter' },
         { title: 'Supply Mission Successful', description: 'A cargo vehicle docked with the ISS delivering experiments.', url: 'https://example.com/article2', urlToImage: '', source: { name: 'OrbitalDaily' }, publishedAt: new Date().toISOString(), author: 'John Space' },
         { title: 'Astronauts Conduct Spacewalk', description: 'Maintenance work completed outside the station.', url: 'https://example.com/article3', urlToImage: '', source: { name: 'MissionLog' }, publishedAt: new Date().toISOString(), author: 'Alex Crew' },
         { title: 'New Experiment on Microgravity Effects', description: 'Results from a biology experiment show promising data.', url: 'https://example.com/article4', urlToImage: '', source: { name: 'LabNotes' }, publishedAt: new Date().toISOString(), author: 'Dr. K' },
         { title: 'International Collaboration Expands', description: 'Agreements signed for next year scientific payloads.', url: 'https://example.com/article5', urlToImage: '', source: { name: 'GlobalSpace' }, publishedAt: new Date().toISOString(), author: 'Reporter X' },
-      ] : [],
+      ],
       newsSearch: '',
       newsSort: 'date',
       newsCategory: 'all',
-      newsLastFetched: import.meta.env.DEV ? Date.now() : null,
+      newsLastFetched: Date.now(),
       isNewsLoading: false,
       newsError: null,
       newsPage: 1,
