@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, X, Trash2, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { fetchNews } from '../services/api';
 import axios from 'axios';
 
 // Tokens read from environment; keep safe redacted defaults
@@ -93,7 +94,7 @@ async function callAI(messages, context) {
 }
 
 export default function AIChat() {
-  const { chatMessages, addMessage, clearChat, issPosition, speedHistory, articles } = useStore();
+  const { chatMessages, addMessage, clearChat, issPosition, speedHistory, articles, setArticles, newsLastFetched, setNewsLoading } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +112,21 @@ export default function AIChat() {
     addMessage(userMsg);
     setInput('');
     setIsLoading(true);
+
+    // If the user asks about news/headlines and our articles are stale or missing, fetch fresh articles first
+    const wantsNews = /news|headline|headlines|latest|breaking/i.test(input);
+    if (wantsNews && (!articles || articles.length < 3)) {
+      try {
+        setNewsLoading(true);
+        const apiKey = import.meta.env.VITE_NEWS_API_KEY;
+        const fresh = await fetchNews('space nasa iss spacex', apiKey);
+        if (fresh?.length) setArticles(fresh);
+      } catch (err) {
+        console.warn('Failed to fetch news for chat:', err);
+      } finally {
+        setNewsLoading(false);
+      }
+    }
 
     const context = buildContext({ issPosition, speedHistory, articles });
     const response = await callAI([...chatMessages, userMsg], context);
