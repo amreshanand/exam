@@ -115,7 +115,7 @@ const MOCK_NEWS = [
   { title: 'New Microgravity Study on Plant Growth', description: 'Scientists are testing how radish seeds sprout in the ISS laboratory.', url: '#', urlToImage: '', source: { name: 'Orbital Lab' }, publishedAt: new Date().toISOString(), author: 'Dr. Green' }
 ];
 
-// News API
+// News API with aggressive CORS bypass
 export const fetchNews = async (query = 'space', apiKey) => {
   if (!apiKey || apiKey.startsWith('your')) return MOCK_NEWS;
   
@@ -124,29 +124,28 @@ export const fetchNews = async (query = 'space', apiKey) => {
       ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
       : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
     
-    let res;
-    try {
-      res = await axios.get(url);
-    } catch {
-      const data = await proxyFetch(url);
-      res = { data };
-    }
-
-    const results = res.data.articles || res.data.results || [];
+    // We always try proxy for News to ensure CORS success on Vercel
+    const data = await proxyFetch(url);
     
-    if (results.length === 0) return MOCK_NEWS;
+    // Normalize different API response formats
+    const results = data.articles || data.results || data.contents?.articles || data.contents?.results || [];
+    
+    if (!results || results.length === 0) {
+      console.warn('API returned no results, using fallback briefings.');
+      return MOCK_NEWS;
+    }
 
     return results.map(item => ({
       title: item.title || 'No Title',
       description: item.description || item.content || 'No description available',
       url: item.url || item.link,
       urlToImage: item.urlToImage || item.image_url,
-      source: { name: item.source?.name || item.source_id || 'Space News' },
-      publishedAt: item.publishedAt || item.pubDate,
+      source: { name: item.source?.name || item.source_id || 'Space Intelligence' },
+      publishedAt: item.publishedAt || item.pubDate || new Date().toISOString(),
       author: item.author || item.creator?.[0] || 'Mission Control'
     }));
   } catch (err) {
-    console.error('News Fetch Error:', err);
+    console.error('Aggressive News Fetch Error:', err);
     return MOCK_NEWS;
   }
 };
