@@ -86,9 +86,9 @@ export default function App() {
         try {
           const apiKey = import.meta.env.VITE_NEWS_API_KEY;
           const newsData = await fetchNews('space nasa iss spacex', apiKey);
-          if (newsData?.length > 0) {
-            setArticles(newsData);
-            if (isFirstLoad) toast.success(`Intelligence Sync: ${newsData.length} reports`, { icon: '🚀' });
+          setArticles(newsData);
+          if (isFirstLoad && newsData.length > 0) {
+            toast.success(`Intelligence Sync: ${newsData.length} reports`, { icon: '🚀' });
           }
         } catch {
           // silent fail

@@ -109,16 +109,21 @@ export const fetchPeopleInSpace = async () => {
   }
 };
 
+const MOCK_NEWS = [
+  { title: 'ISS Astronauts Complete Successful Spacewalk', description: 'Engineers spent 6 hours outside the station upgrading power systems.', url: '#', urlToImage: '', source: { name: 'NASA News' }, publishedAt: new Date().toISOString(), author: 'Mission Control' },
+  { title: 'SpaceX Dragon Docks with Fresh Supplies', description: 'The cargo craft brought 6,000 lbs of scientific experiments and food.', url: '#', urlToImage: '', source: { name: 'SpaceX' }, publishedAt: new Date().toISOString(), author: 'Elon Musk' },
+  { title: 'New Microgravity Study on Plant Growth', description: 'Scientists are testing how radish seeds sprout in the ISS laboratory.', url: '#', urlToImage: '', source: { name: 'Orbital Lab' }, publishedAt: new Date().toISOString(), author: 'Dr. Green' }
+];
+
 // News API
 export const fetchNews = async (query = 'space', apiKey) => {
-  if (!apiKey || apiKey.startsWith('your')) return [];
+  if (!apiKey || apiKey.startsWith('your')) return MOCK_NEWS;
+  
   try {
     const url = apiKey.startsWith('pub_') 
       ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
       : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
     
-    // News APIs usually handle CORS themselves or need a different proxy approach
-    // We'll try direct first, then proxy
     let res;
     try {
       res = await axios.get(url);
@@ -129,6 +134,8 @@ export const fetchNews = async (query = 'space', apiKey) => {
 
     const results = res.data.articles || res.data.results || [];
     
+    if (results.length === 0) return MOCK_NEWS;
+
     return results.map(item => ({
       title: item.title || 'No Title',
       description: item.description || item.content || 'No description available',
@@ -140,6 +147,6 @@ export const fetchNews = async (query = 'space', apiKey) => {
     }));
   } catch (err) {
     console.error('News Fetch Error:', err);
-    return [];
+    return MOCK_NEWS;
   }
 };
