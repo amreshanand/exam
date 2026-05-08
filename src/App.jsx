@@ -42,61 +42,69 @@ export default function App() {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  // Core data fetcher
+  // Core data fetcher - optimized for parallel non-blocking execution
   const fetchAllData = useCallback(async (isFirstLoad = false) => {
-    if (isFirstLoad) setISSLoading(true);
+    // Only show loading if we have NO cached data
+    if (isFirstLoad && !issPosition) setISSLoading(true);
 
-    try {
-      // 1. Fetch ISS Position
-      const issData = await fetchISSPosition();
-      if (issData?.message === 'success') {
-        // Add current timestamp to the data for speed calculation
-        const dataWithTime = { ...issData, timestamp: Date.now() };
-
-        if (prevPosRef.current) {
-          const speed = calculateSpeed(prevPosRef.current, dataWithTime);
-          addSpeedEntry({ speed, time: Date.now() });
+    const fetchISS = async () => {
+      try {
+        const issData = await fetchISSPosition();
+        if (issData?.message === 'success') {
+          const dataWithTime = { ...issData, timestamp: Date.now() };
+          if (prevPosRef.current) {
+            const speed = calculateSpeed(prevPosRef.current, dataWithTime);
+            addSpeedEntry({ speed, time: Date.now() });
+          }
+          prevPosRef.current = dataWithTime;
+          setISSPosition(dataWithTime);
         }
-        prevPosRef.current = dataWithTime;
-        setISSPosition(dataWithTime);
+      } catch (err) {
+        if (isFirstLoad) console.warn('ISS connection failed — retrying…');
+      } finally {
+        setISSLoading(false);
       }
-    } catch (err) {
-      if (isFirstLoad) toast.error('ISS connection failed — retrying…');
-    } finally {
-      if (isFirstLoad) setISSLoading(false);
-    }
+    };
 
-    // 2. Fetch Astronauts (only on first load)
-    if (isFirstLoad) {
+    const fetchAstros = async () => {
+      if (!isFirstLoad) return;
       setAstronautsLoading(true);
       try {
         const astroData = await fetchPeopleInSpace();
         setAstronauts(astroData);
       } catch {
-        setAstronauts({ number: 0, people: [] });
+        // Fallback to existing or mock
       } finally {
         setAstronautsLoading(false);
       }
-    }
+    };
 
-    // 3. Fetch News (only if cache expired or first load)
-    const cacheExpired = !newsLastFetched || (Date.now() - newsLastFetched > NEWS_CACHE_MS);
-    if (isFirstLoad || cacheExpired) {
-      setNewsLoading(true);
-      try {
-        const apiKey = import.meta.env.VITE_NEWS_API_KEY;
-        const newsData = await fetchNews('space nasa iss spacex', apiKey);
-        if (newsData?.length > 0) {
-          setArticles(newsData);
-          if (isFirstLoad) toast.success(`Loaded ${newsData.length} articles`);
+    const fetchNewsData = async () => {
+      const cacheExpired = !newsLastFetched || (Date.now() - newsLastFetched > NEWS_CACHE_MS);
+      if (isFirstLoad || cacheExpired) {
+        setNewsLoading(true);
+        try {
+          const apiKey = import.meta.env.VITE_NEWS_API_KEY;
+          const newsData = await fetchNews('space nasa iss spacex', apiKey);
+          if (newsData?.length > 0) {
+            setArticles(newsData);
+            if (isFirstLoad) toast.success(`Intelligence Sync: ${newsData.length} reports`, { icon: '🚀' });
+          }
+        } catch {
+          // silent fail
+        } finally {
+          setNewsLoading(false);
         }
-      } catch {
-        // silent fail — keep existing articles
-      } finally {
-        setNewsLoading(false);
       }
-    }
-  }, [newsLastFetched]);
+    };
+
+    // Execute all in parallel without blocking each other
+    await Promise.allSettled([
+      fetchISS(),
+      fetchAstros(),
+      fetchNewsData()
+    ]);
+  }, [newsLastFetched, issPosition]);
 
   // Start polling
   useEffect(() => {

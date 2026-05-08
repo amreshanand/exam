@@ -123,8 +123,10 @@ export const useStore = create(
       name: 'iss-dashboard-store',
       partialize: (s) => ({
         isDark: s.isDark,
+        issPosition: s.issPosition,
         issHistory: s.issHistory,
         speedHistory: s.speedHistory,
+        astronauts: s.astronauts,
         articles: s.articles,
         newsLastFetched: s.newsLastFetched,
         chatMessages: s.chatMessages,
