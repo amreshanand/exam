@@ -1,16 +1,28 @@
-# React + Vite
+# 🚀 ISS Mission Control & News Intelligence Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A high-performance, real-time dashboard for tracking the International Space Station (ISS) and staying updated with the latest space exploration news.
 
-Currently, two official plugins are available:
+**Live Deployment:** [https://exam-fawn-theta.vercel.app/](https://exam-fawn-theta.vercel.app/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
+- **ISS Real-Time Tracking**: Live position telemetry (Latitude/Longitude) updated every 10 seconds.
+- **Orbital Analytics**: Live velocity tracking and speed history visualization using Recharts.
+- **Crew Manifest**: Real-time census of personnel currently aboard the ISS, including roles and craft details.
+- **Space News Intelligence**: Curated feed of the latest headlines from NASA, SpaceX, and global space agencies.
+- **AI Mission Assistant**: Integrated AI chatbot (Groq Llama 3.3 70B) with full awareness of dashboard telemetry.
+- **Dynamic UI**: Glassmorphic design with dark/light mode support and smooth Framer Motion animations.
 
-## React Compiler
+## 🛠️ Tech Stack
+- **Framework**: React 19 + Vite
+- **State Management**: Zustand (with Persistence)
+- **Styling**: Tailwind CSS 4
+- **Animations**: Framer Motion
+- **Maps**: React-Leaflet
+- **Charts**: Recharts
+- **API**: Groq Cloud, Hugging Face, NewsAPI, Open-Notify
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 Getting Started
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up your `.env` with `VITE_NEWS_API_KEY` and `VITE_GROQ_TOKEN`
+4. Run locally: `npm run dev`

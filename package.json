@@ -1,7 +1,9 @@
 {
   "name": "exam",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Real-time ISS tracking and space news dashboard",
+  "homepage": "https://exam-fawn-theta.vercel.app/",
   "type": "module",
   "scripts": {
     "dev": "vite",
