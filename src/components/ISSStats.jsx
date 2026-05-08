@@ -40,24 +40,33 @@ export default function ISSStats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {stats.map((stat, i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
-          className="p-4 rounded-xl border border-[var(--border)]"
-          style={{ background: 'var(--bg)' }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: i * 0.1, type: 'spring', stiffness: 200 }}
+          className="stat-card group"
         >
-          <div className="flex items-center gap-1.5 mb-2" style={{ color: 'var(--text-secondary)' }}>
-            {stat.icon}
-            <span className="text-[9px] font-bold uppercase tracking-widest">{stat.label}</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 rounded-lg bg-[var(--secondary-glow)] text-[var(--secondary)] group-hover:scale-110 transition-transform">
+              {stat.icon}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[8px] font-bold text-green-500 uppercase tracking-tighter">Live</span>
+            </div>
           </div>
+          
+          <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+            {stat.label}
+          </div>
+
           {stat.loading ? (
-            <div className="h-5 w-24 rounded bg-gray-200 animate-pulse" />
+            <div className="h-6 w-full skeleton" />
           ) : (
-            <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+            <div className="text-lg font-black mono text-[var(--text-primary)]">
               {stat.value}
             </div>
           )}

@@ -44,83 +44,81 @@ export default function NewsPanel() {
   }, [displayed.length, filtered.length]);
 
   return (
-    <div className="card p-6 shadow-sm border-0" style={{ background: 'var(--card-bg)' }}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+    <div className="card p-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
         <div>
-          <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Breaking News</h2>
+          <h2 className="text-2xl font-black gradient-text pr-2">Space Intelligence</h2>
+          <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1">Global Mission Briefings</p>
         </div>
-        <button onClick={handleRefresh} className="btn-ghost text-xs px-3 py-1 flex items-center gap-2">
+        <button 
+          onClick={handleRefresh} 
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--border)] hover:border-[var(--secondary)] transition-all bg-[var(--bg)] text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)]"
+        >
           <RefreshCcw size={14} className={isNewsLoading ? 'animate-spin' : ''} />
-          Refresh
+          Sync Intelligence
         </button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--secondary)] transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Search title, source, author..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--border)] bg-transparent text-sm"
+            placeholder="Search keywords, agencies, or missions..."
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-sm focus:border-[var(--secondary)] focus:ring-2 focus:ring-[var(--secondary-glow)] outline-none transition-all placeholder:text-[var(--text-muted)]"
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
           />
         </div>
-        <select className="px-4 py-2 rounded-lg border border-[var(--border)] bg-transparent text-sm">
-          <option>Sort by Date</option>
-          <option>Sort by Source</option>
-        </select>
+        <div className="flex gap-2">
+          <select className="px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)] outline-none focus:border-[var(--secondary)]">
+            <option>Latest Intelligence</option>
+            <option>Relevance</option>
+          </select>
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
         {displayed.map((article, idx) => (
-          <div key={idx} className="flex flex-col rounded-xl border border-[var(--border)] overflow-hidden transition-all">
+          <div key={idx} className="group relative flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg)] hover:bg-[var(--card-hover)] hover:border-[var(--secondary)] transition-all duration-300 overflow-hidden">
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors group cursor-pointer"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className="flex items-center gap-6 p-5 cursor-pointer"
               onClick={() => setExpandedId(expandedId === idx ? null : idx)}
             >
-              <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                {idx + 1}
+              <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] text-[var(--secondary)] font-black text-xs">
+                {String(idx + 1).padStart(2, '0')}
               </div>
 
-              <div className="w-16 h-16 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0 border border-gray-100">
+              <div className="w-20 h-20 rounded-xl bg-[var(--card-bg)] overflow-hidden flex-shrink-0 border border-[var(--border)] group-hover:border-[var(--secondary)] transition-colors">
                 {article.urlToImage ? (
-                  <img src={article.urlToImage} className="w-full h-full object-cover" alt="" />
+                  <img src={article.urlToImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400">
-                    <Satellite size={20} />
+                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                    <Satellite size={24} />
                   </div>
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-                    {article.source?.name || 'NEWS'}
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="px-2 py-0.5 rounded bg-[var(--secondary-glow)] text-[var(--secondary)] text-[9px] font-black uppercase tracking-widest">
+                    {article.source?.name || 'GENERIC'}
                   </span>
-                  <span className="text-[10px] text-gray-400">•</span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(article.publishedAt).toLocaleString()}
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold mono">
+                    {new Date(article.publishedAt).toLocaleDateString()}
                   </span>
                 </div>
-                <h3 className="text-sm font-bold truncate pr-4 text-gray-900">
+                <h3 className="text-sm md:text-base font-bold text-[var(--text-primary)] leading-snug truncate pr-8">
                   {article.title}
                 </h3>
-                <div className="flex items-center gap-4 mt-1">
-                   <button className="text-[11px] font-semibold text-red-500 hover:underline">
-                     {expandedId === idx ? 'Show Less' : 'Learn More'}
-                   </button>
-                </div>
               </div>
 
-              <a 
-                href={article.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-500 transition-all bg-white shadow-sm"
-              >
-                <ExternalLink size={14} />
-              </a>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ExternalLink size={16} className="text-[var(--secondary)]" />
+              </div>
             </motion.div>
 
             <AnimatePresence>
@@ -129,21 +127,29 @@ export default function NewsPanel() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="bg-gray-50/50 border-t border-[var(--border)] px-4 py-4 overflow-hidden"
+                  className="px-5 pb-6 overflow-hidden"
                 >
-                  <p className="text-xs text-gray-700 leading-relaxed mb-4">
-                    {article.description || article.content || 'No detailed description available for this article.'}
+                  <div className="h-px w-full bg-[var(--border)] mb-5" />
+                  <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed mb-6 max-w-4xl">
+                    {article.description || article.content || 'Detailed mission brief restricted or unavailable.'}
                   </p>
-                  <div className="flex flex-wrap gap-4 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><User size={12}/> {article.author || 'Mission Intelligence'}</div>
-                    <div className="flex items-center gap-1.5"><Calendar size={12}/> {new Date(article.publishedAt).toDateString()}</div>
-                    <div className="flex items-center gap-1.5"><BarChart2 size={12}/> Source: {article.source?.name}</div>
+                  
+                  <div className="flex flex-wrap items-center gap-6 mb-6">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                      <User size={14} className="text-[var(--secondary)]" />
+                      {article.author || 'Mission Intelligence'}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                      <Calendar size={14} className="text-[var(--secondary)]" />
+                      {new Date(article.publishedAt).toDateString()}
+                    </div>
                   </div>
+
                   <a 
                     href={article.url} target="_blank" rel="noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700"
+                    className="inline-flex items-center gap-2 text-xs font-black text-[var(--secondary)] hover:text-[var(--accent)] transition-colors uppercase tracking-[0.2em]"
                   >
-                    Read Full Investigation <ExternalLink size={12} />
+                    ACCESS FULL REPORT <ExternalLink size={12} />
                   </a>
                 </motion.div>
               )}
@@ -152,7 +158,11 @@ export default function NewsPanel() {
         ))}
       </div>
 
-      <div ref={observerTarget} className="h-10 w-full" />
+      <div ref={observerTarget} className="h-20 w-full flex items-center justify-center">
+         {displayed.length < filtered.length && (
+           <div className="w-1.5 h-1.5 rounded-full bg-[var(--secondary)] animate-ping" />
+         )}
+      </div>
     </div>
   );
 }

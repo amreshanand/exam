@@ -4,19 +4,27 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Custom ISS marker SVG
+// Custom ISS marker SVG with radar-like pulse
 const ISS_ICON = L.divIcon({
   className: '',
-  html: `<div style="
-    width: 36px; height: 36px;
-    background: radial-gradient(circle, #3b82f6 0%, #1d4ed8 60%, transparent 70%);
-    border-radius: 50%;
-    border: 2px solid #60a5fa;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 12px #3b82f6, 0 0 24px #3b82f640;
-    font-size: 18px; line-height: 1;
-  ">🛸</div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-12 h-12 rounded-full bg-blue-500/20 animate-ping"></div>
+    <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 animate-pulse"></div>
+    <div style="
+      width: 40px; height: 40px;
+      background: radial-gradient(circle, #388BFD 0%, #0D1117 80%);
+      border-radius: 12px;
+      border: 2px solid #388BFD;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 20px #388BFD, inset 0 0 10px #388BFD;
+      transform: rotate(45deg);
+      transition: all 0.5s ease;
+    ">
+      <div style="transform: rotate(-45deg); font-size: 20px;">📡</div>
+    </div>
+  </div>`,
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
 });
 
 export default function ISSMap() {
@@ -67,10 +75,12 @@ export default function ISSMap() {
         parseFloat(p.iss_position.longitude),
       ]);
       pathRef.current = L.polyline(coords, {
-        color: '#ef4444',
-        weight: 2,
-        opacity: 0.7,
-        dashArray: '6 4',
+        color: '#388BFD',
+        weight: 3,
+        opacity: 0.6,
+        dashArray: '8 8',
+        lineCap: 'round',
+        lineJoin: 'round',
       }).addTo(leafletMap.current);
     }
 

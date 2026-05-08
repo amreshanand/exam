@@ -106,30 +106,57 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
-      <Toaster position="top-right" toastOptions={{ style: { borderRadius: '12px', fontSize: '13px' } }} />
+    <div className="min-h-screen pb-24 selection:bg-blue-500/30">
+      <Toaster position="top-right" toastOptions={{ style: { background: '#121826', color: '#F0F6FC', border: '1px solid rgba(56, 139, 253, 0.2)', borderRadius: '12px', fontSize: '13px' } }} />
 
       {/* Header */}
-      <header className="max-w-[1600px] mx-auto px-6 pt-8 mb-6 flex justify-between items-start">
-        <div>
-          <div className="text-[10px] font-bold orbitron tracking-[0.2em] mb-1 text-blue-500">
-            MISSION CONTROL DASHBOARD
-          </div>
-          <h1 className="text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
-            Real-Time ISS and News Intelligence
-          </h1>
-        </div>
-        <button
-          onClick={toggleTheme}
-          className="flex items-center gap-2 text-xs px-4 py-2 rounded-xl border border-[var(--border)] hover:border-blue-400 transition-all"
-          style={{ color: 'var(--text-secondary)', background: 'var(--card-bg)' }}
+      <header className="max-w-[1600px] mx-auto px-8 pt-10 mb-10 flex flex-col md:flex-row justify-between items-center md:items-end gap-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-center md:text-left"
         >
-          {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          Switch to {isDark ? 'Light' : 'Dark'}
-        </button>
+          <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-[10px] font-black orbitron tracking-[0.3em] text-blue-500/80">
+              EST. 1998 • LOW EARTH ORBIT
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight mb-2">
+            Mission <span className="gradient-text">Control</span> Center
+          </h1>
+          <p className="text-sm font-semibold text-[var(--text-secondary)] max-w-lg">
+            Real-time orbital telemetry and space intelligence processing for the International Space Station.
+          </p>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-4"
+        >
+          <div className="hidden lg:flex flex-col items-end mr-4">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">System Status</span>
+            <span className="text-xs font-black text-green-500 flex items-center gap-2">
+              ALL SYSTEMS NOMINAL <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            </span>
+          </div>
+          
+          <button
+            onClick={toggleTheme}
+            className="group flex items-center gap-3 px-6 py-3 rounded-2xl border border-[var(--border)] hover:border-[var(--secondary)] transition-all bg-[var(--card-bg)] hover:shadow-[0_0_20px_rgba(56,139,253,0.1)]"
+          >
+            <div className="p-2 rounded-lg bg-[var(--bg)] group-hover:bg-[var(--secondary-glow)] transition-colors">
+              {isDark ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-blue-500" />}
+            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)]">
+              {isDark ? 'Light' : 'Dark'} Mode
+            </span>
+          </button>
+        </motion.div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-6 space-y-6">
+      <main className="max-w-[1600px] mx-auto px-8 space-y-8">
         {/* Row 1: ISS Live Tracking + Right Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* ISS Tracking Column */}
