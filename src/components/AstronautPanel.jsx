@@ -28,10 +28,13 @@ export default function AstronautPanel() {
           </div>
           <div>
             <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Astronaut Manifest</h3>
-            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Live Census</p>
+            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Live Census - Current Crew Aboard ISS</p>
           </div>
         </div>
-        <div className="text-2xl font-black text-blue-500">{count}</div>
+        <div className="text-right">
+          <div className="text-2xl font-black text-blue-500">{count}</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400">People in Space</div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
@@ -50,7 +53,9 @@ export default function AstronautPanel() {
                 </div>
                 <div>
                   <div className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{p.craft}</div>
+                  <div className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                    {p.role || 'Crew Member'} • {p.craft}
+                  </div>
                 </div>
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity">

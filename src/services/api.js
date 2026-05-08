@@ -1,15 +1,67 @@
 import axios from 'axios';
 
-// More reliable proxy format
-const PROXY_URL = 'https://api.allorigins.win/get?url=';
+const OPEN_NOTIFY_ISS_URL = 'http://api.open-notify.org/iss-now.json';
+const OPEN_NOTIFY_ASTRONAUTS_URL = 'http://api.open-notify.org/astros.json';
+
+const PROXY_ENDPOINTS = [
+  (targetUrl) => `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+  (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+  (targetUrl) => `https://r.jina.ai/http://${targetUrl.replace(/^https?:\/\//, '')}`,
+];
+
+const parseProxyPayload = (responseData) => {
+  if (responseData == null) return null;
+
+  if (typeof responseData === 'string') {
+    const trimmed = responseData.trim();
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      const maybeJson = trimmed.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(maybeJson);
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+  }
+
+  return responseData;
+};
 
 const proxyFetch = async (targetUrl) => {
-  const res = await axios.get(`${PROXY_URL}${encodeURIComponent(targetUrl)}`);
-  // AllOrigins returns data in a 'contents' field as a string
-  if (typeof res.data.contents === 'string') {
-    return JSON.parse(res.data.contents);
+  let lastError = null;
+
+  for (const buildProxyUrl of PROXY_ENDPOINTS) {
+    try {
+      const proxyUrl = buildProxyUrl(targetUrl);
+      const res = await axios.get(proxyUrl, { timeout: 15000 });
+
+      if (typeof res.data?.contents === 'string') {
+        const parsed = parseProxyPayload(res.data.contents);
+        if (parsed) return parsed;
+      }
+
+      const parsed = parseProxyPayload(res.data);
+      if (parsed) {
+        if (parsed.contents) {
+          const nested = parseProxyPayload(parsed.contents);
+          if (nested) return nested;
+        }
+        return parsed;
+      }
+    } catch (err) {
+      lastError = err;
+    }
   }
-  return res.data.contents;
+
+  throw lastError || new Error(`Unable to fetch ${targetUrl}`);
 };
 
 // Haversine Formula for Distance Calculation (km)
@@ -40,7 +92,7 @@ export const calculateSpeed = (prev, curr) => {
 // Fetch ISS Position
 export const fetchISSPosition = async () => {
   try {
-    return await proxyFetch('http://api.open-notify.org/iss-now.json');
+    return await proxyFetch(OPEN_NOTIFY_ISS_URL);
   } catch (err) {
     console.error('ISS Fetch Error:', err);
     throw err;
@@ -50,7 +102,7 @@ export const fetchISSPosition = async () => {
 // Fetch People in Space
 export const fetchPeopleInSpace = async () => {
   try {
-    return await proxyFetch('http://api.open-notify.org/astros.json');
+    return await proxyFetch(OPEN_NOTIFY_ASTRONAUTS_URL);
   } catch (err) {
     console.error('Astronaut Fetch Error:', err);
     return { number: 0, people: [] };

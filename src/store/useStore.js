@@ -43,7 +43,17 @@ export const useStore = create(
       setISSError: (e) => set({ issError: e }),
 
       // Astronauts
-      astronauts: import.meta.env.DEV ? { number: 3, people: [ { name: 'A. Patel', craft: 'ISS' }, { name: 'B. Kim', craft: 'ISS' }, { name: 'C. Smith', craft: 'ISS' } ] } : null,
+      astronauts: import.meta.env.DEV ? {
+        number: 6,
+        people: [
+          { name: 'A. Patel', craft: 'ISS', role: 'Commander' },
+          { name: 'B. Kim', craft: 'ISS', role: 'Flight Engineer' },
+          { name: 'C. Smith', craft: 'ISS', role: 'Mission Specialist' },
+          { name: 'D. Lopez', craft: 'ISS', role: 'Payload Specialist' },
+          { name: 'E. Novak', craft: 'ISS', role: 'Science Officer' },
+          { name: 'F. Chen', craft: 'ISS', role: 'Systems Engineer' },
+        ]
+      } : null,
       isAstronautsLoading: false,
       setAstronauts: (a) => set({ astronauts: a }),
       setAstronautsLoading: (v) => set({ isAstronautsLoading: v }),
