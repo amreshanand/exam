@@ -5,9 +5,7 @@ import { useStore } from '../store/useStore';
 import { fetchNews } from '../services/api';
 import axios from 'axios';
 
-// Tokens read from environment; keep safe redacted defaults
-const HF_TOKEN = import.meta.env.VITE_AI_TOKEN || 'REDACTED_HF_TOKEN';
-const GROQ_TOKEN = import.meta.env.VITE_GROQ_TOKEN || 'REDACTED_GROQ_TOKEN';
+// Tokens are accessed via import.meta.env inside the functions to ensure they are properly handled by Vite.
 
 function buildContext(state) {
   const { issPosition, speedHistory, articles, astronauts } = state;
@@ -42,6 +40,9 @@ function buildContext(state) {
 }
 
 async function callAI(messages, context) {
+  const GROQ_TOKEN = import.meta.env.VITE_GROQ_TOKEN;
+  const HF_TOKEN = import.meta.env.VITE_AI_TOKEN;
+
   const systemPrompt = `You are the ISS Mission Control AI Assistant. 
 CORE DATA DIRECTIVE: Use the following LIVE dashboard telemetry to assist the user:
 
@@ -57,7 +58,7 @@ COMMUNICATION PROTOCOL:
   const userMsg = messages[messages.length - 1].content;
 
   // 1. TRY GROQ (Llama 3)
-  if (GROQ_TOKEN && GROQ_TOKEN !== 'REDACTED_GROQ_TOKEN') {
+  if (GROQ_TOKEN) {
     try {
       const res = await axios.post(
         'https://api.groq.com/openai/v1/chat/completions',
@@ -82,7 +83,7 @@ COMMUNICATION PROTOCOL:
   }
 
   // 2. FALLBACK TO HUGGING FACE
-  if (HF_TOKEN && HF_TOKEN !== 'REDACTED_HF_TOKEN') {
+  if (HF_TOKEN) {
     try {
       const res = await axios.post(
         'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
@@ -101,7 +102,7 @@ COMMUNICATION PROTOCOL:
     }
   }
 
-  // 3. HARD-CODED FALLBACK (If all APIs fail)
+  // 3. HARD-CODED FALLBACK (If all APIs fail or tokens are missing)
   const query = userMsg.toLowerCase();
   if (query.includes('where') || query.includes('location') || query.includes('lat') || query.includes('lon')) {
     const latMatch = context.match(/Lat ([\d.-]+), Lon ([\d.-]+)/);
@@ -114,6 +115,10 @@ COMMUNICATION PROTOCOL:
   if (query.includes('who') || query.includes('crew') || query.includes('people')) {
     const crewMatch = context.match(/\[CREW MANIFEST\] (.*?\.)/);
     if (crewMatch) return crewMatch[1];
+  }
+
+  if (!GROQ_TOKEN) {
+    return "Mission Control: AI tokens are missing in the environment settings. Please verify VITE_GROQ_TOKEN in your deployment configuration.";
   }
 
   return "I'm currently experiencing connectivity issues with Mission Control servers. Please check the dashboard gauges for live telemetry.";
