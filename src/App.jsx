@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { Sun, Moon, ChevronUp } from 'lucide-react';
+import { Sun, Moon, ChevronUp, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
