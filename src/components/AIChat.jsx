@@ -13,88 +13,114 @@ function buildContext(state) {
   const { issPosition, speedHistory, articles, astronauts } = state;
   const parts = [];
 
+  // 1. ISS Telemetry
   if (issPosition?.iss_position) {
     const lat = parseFloat(issPosition.iss_position.latitude).toFixed(4);
     const lon = parseFloat(issPosition.iss_position.longitude).toFixed(4);
     const speed = speedHistory.length > 0 ? Math.round(speedHistory[speedHistory.length - 1]?.speed) : 27600;
-    parts.push(`[ISS LIVE DATA] Position: ${lat} lat, ${lon} lon. Current Speed: ${speed.toLocaleString()} km/h.`);
+    const timestamp = new Date(issPosition.timestamp).toLocaleTimeString();
+    parts.push(`[TELEMETRY] ISS Position: Lat ${lat}, Lon ${lon}. Orbital Velocity: ${speed.toLocaleString()} km/h. Last Sync: ${timestamp}.`);
   }
 
-  if (astronauts?.people) {
-    parts.push(`[CREW] ${astronauts.number} people in space. Names: ${astronauts.people.map(p => p.name).join(', ')}.`);
+  // 2. Crew Info
+  if (astronauts?.people && astronauts.people.length > 0) {
+    const crewList = astronauts.people.map(p => `${p.name} (${p.role || 'Crew Member'} on ${p.craft})`).join(', ');
+    parts.push(`[CREW MANIFEST] ${astronauts.number} members currently aboard. Personnel: ${crewList}.`);
+  } else if (astronauts?.number === 0) {
+    parts.push(`[CREW MANIFEST] Status: No active crew data retrieved.`);
   }
 
+  // 3. News Context
   if (articles?.length) {
-    const newsSummary = articles.slice(0, 5).map((a, i) => 
-      `News ${i+1}: "${a.title}" (${a.source?.name || 'Unknown'})`
+    const newsSummary = articles.slice(0, 4).map((a, i) => 
+      `Ref ${i+1}: "${a.title}" from ${a.source?.name || 'Unknown'}`
     ).join(' | ');
-    parts.push(`[LATEST NEWS] ${newsSummary}`);
+    parts.push(`[SPACE INTELLIGENCE] Recent Headlines: ${newsSummary}`);
   }
 
   return parts.join('\n\n');
 }
 
 async function callAI(messages, context) {
-  const systemPrompt = `You are an ISS Mission Control AI Assistant. Use this live dashboard data ONLY to answer the user's question:\n\n${context}\n\nKeep answers concise, direct, and under 3 sentences. If the user asks something not covered by the data, say "I can only provide information based on current ISS telemetry and space news."`;
+  const systemPrompt = `You are the ISS Mission Control AI Assistant. 
+CORE DATA DIRECTIVE: Use the following LIVE dashboard telemetry to assist the user:
+
+${context}
+
+COMMUNICATION PROTOCOL:
+1. Be professional, concise, and technically accurate.
+2. If asked about ISS location, speed, or crew, use the provided [TELEMETRY] and [CREW MANIFEST] data.
+3. If asked about recent events, refer to [SPACE INTELLIGENCE].
+4. If the data is missing or doesn't cover the query, state: "I only have access to current ISS telemetry and latest space news."
+5. Limit responses to 2-3 sentences max.`;
+
   const userMsg = messages[messages.length - 1].content;
 
-  // 1. TRY GROQ FIRST (Fastest)
-  try {
-    const res = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        model: 'llama3-8b-8192',
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
-        max_tokens: 150,
-        temperature: 0.3
-      },
-      { headers: { Authorization: `Bearer ${GROQ_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
-    );
-    if (res.data?.choices?.[0]?.message?.content) {
-      return res.data.choices[0].message.content.trim();
+  // 1. TRY GROQ (Llama 3)
+  if (GROQ_TOKEN && GROQ_TOKEN !== 'REDACTED_GROQ_TOKEN') {
+    try {
+      const res = await axios.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...messages.slice(-3).map(m => ({ role: m.role, content: m.content }))
+          ],
+          max_tokens: 250,
+          temperature: 0.5
+        },
+        { headers: { Authorization: `Bearer ${GROQ_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+      );
+      
+      if (res.data?.choices?.[0]?.message?.content) {
+        return res.data.choices[0].message.content.trim();
+      }
+    } catch (e) {
+      console.warn("Groq API Error:", e.response?.data || e.message);
     }
-  } catch (e) {
-    console.warn("Groq Service busy, trying Hugging Face...");
   }
 
-  // 2. TRY HUGGING FACE (Fallback)
-  try {
-    const res = await axios.post(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
-      { inputs: `[INST] ${systemPrompt}\nUser: ${userMsg} [/INST]`, parameters: { max_new_tokens: 150, wait_for_model: true } },
-      { headers: { Authorization: `Bearer ${HF_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 20000 }
-    );
-    if (res.data?.[0]?.generated_text) {
-      return res.data[0].generated_text.split('[/INST]').pop().trim();
+  // 2. FALLBACK TO HUGGING FACE
+  if (HF_TOKEN && HF_TOKEN !== 'REDACTED_HF_TOKEN') {
+    try {
+      const res = await axios.post(
+        'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+        { 
+          inputs: `[INST] ${systemPrompt}\nUser Question: ${userMsg} [/INST]`, 
+          parameters: { max_new_tokens: 150, wait_for_model: true, return_full_text: false } 
+        },
+        { headers: { Authorization: `Bearer ${HF_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 15000 }
+      );
+      
+      if (res.data?.[0]?.generated_text) {
+        return res.data[0].generated_text.trim();
+      }
+    } catch (e) {
+      console.warn("Hugging Face API Error:", e.message);
     }
-  } catch (e) {
-    console.error("All AI services offline.");
-    
-    // Manual fallback using regex to find answers if APIs fail
-    const lCUserMsg = userMsg.toLowerCase();
-    if (lCUserMsg.includes('where') || lCUserMsg.includes('location') || lCUserMsg.includes('lat') || lCUserMsg.includes('lon')) {
-      const latMatch = context.match(/Position: ([\d.-]+) lat, ([\d.-]+) lon/);
-      if (latMatch) return `The ISS is currently located at Latitude ${latMatch[1]} and Longitude ${latMatch[2]}.`;
-    }
-    if (lCUserMsg.includes('speed') || lCUserMsg.includes('fast')) {
-       const speedMatch = context.match(/Speed: ([\d,]+) km\/h/);
-       if (speedMatch) return `The ISS is traveling at a speed of ${speedMatch[1]} km/h.`;
-    }
-    if (lCUserMsg.includes('who') || lCUserMsg.includes('people') || lCUserMsg.includes('astronaut')) {
-        const crewMatch = context.match(/\[CREW\] (.*?\.)/);
-        if (crewMatch) return crewMatch[1];
-    }
-    if (lCUserMsg.includes('news') || lCUserMsg.includes('headline')) {
-         const newsMatch = context.match(/\[LATEST NEWS\] (.*)/);
-         if (newsMatch) return `Here are the latest headlines: ${newsMatch[1]}`;
-    }
-
-    return `I'm having trouble connecting to my AI processing servers right now. Please try again in a moment.`;
   }
+
+  // 3. HARD-CODED FALLBACK (If all APIs fail)
+  const query = userMsg.toLowerCase();
+  if (query.includes('where') || query.includes('location') || query.includes('lat') || query.includes('lon')) {
+    const latMatch = context.match(/Lat ([\d.-]+), Lon ([\d.-]+)/);
+    if (latMatch) return `The ISS is currently at Latitude ${latMatch[1]} and Longitude ${latMatch[2]}.`;
+  }
+  if (query.includes('speed') || query.includes('fast')) {
+    const speedMatch = context.match(/Velocity: ([\d,]+) km\/h/);
+    if (speedMatch) return `The ISS orbital velocity is currently ${speedMatch[1]} km/h.`;
+  }
+  if (query.includes('who') || query.includes('crew') || query.includes('people')) {
+    const crewMatch = context.match(/\[CREW MANIFEST\] (.*?\.)/);
+    if (crewMatch) return crewMatch[1];
+  }
+
+  return "I'm currently experiencing connectivity issues with Mission Control servers. Please check the dashboard gauges for live telemetry.";
 }
 
 export default function AIChat() {
-  const { chatMessages, addMessage, clearChat, issPosition, speedHistory, articles, setArticles, newsLastFetched, setNewsLoading } = useStore();
+  const { chatMessages, addMessage, clearChat, issPosition, speedHistory, articles, astronauts, setArticles, newsLastFetched, setNewsLoading } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -128,7 +154,7 @@ export default function AIChat() {
       }
     }
 
-    const context = buildContext({ issPosition, speedHistory, articles });
+    const context = buildContext({ issPosition, speedHistory, articles, astronauts });
     const response = await callAI([...chatMessages, userMsg], context);
     addMessage({ role: 'assistant', content: response, timestamp: Date.now() });
     setIsLoading(false);
