@@ -139,68 +139,69 @@ const MOCK_NEWS = [
   }
 ];
 
-// News API with saurav.tech (Free, No Key, Very Reliable)
+// News API with multiple source merging (Highly reliable & Diverse)
 export const fetchNews = async (query = 'space', apiKey) => {
   try {
-    let url;
-    
-    // 1. Determine Source
+    // 1. If API Key is provided, use dedicated providers
     if (apiKey && !apiKey.startsWith('your')) {
-      url = apiKey.startsWith('pub_') 
+      const url = apiKey.startsWith('pub_') 
         ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
         : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
-    } else {
-      // Use saurav.tech News API (Free, No Key, Reliable GitHub Pages host)
-      // For space queries, we use a specific category or search everything
-      const isSpace = query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa');
-      url = isSpace 
-        ? `https://saurav.tech/NewsAPI/everything/cnn.json` // We can't query directly, so we pick a high-quality source
-        : `https://saurav.tech/NewsAPI/top-headlines/category/general/us.json`;
+      const data = await proxyFetch(url);
+      return (data.articles || data.results || []).map(normalizeArticle);
     }
-    
-    // 2. Fetch Data
-    // Saurav.tech is a static JSON host, so direct fetch is best
-    let data;
-    try {
-      const res = await axios.get(url, { timeout: 8000 });
-      data = res.data;
-    } catch (err) {
-      data = await proxyFetch(url);
-    }
-    
-    // 3. Normalize different API response formats
-    const raw = data.articles || data.results || data.contents?.articles || data.contents?.results || [];
-    
-    let results = raw.map(item => ({
-      title: item.title || 'No Title',
-      description: item.description || item.content || item.summary || 'No description available',
-      url: item.url || item.link,
-      urlToImage: item.urlToImage || item.image_url || item.og || '',
-      source: { name: item.source?.name || item.source_id || 'Global News' },
-      publishedAt: item.publishedAt || item.published_at || item.pubDate || new Date().toISOString(),
-      author: item.author || item.creator?.[0] || 'Mission Control'
-    }));
 
-    // If it's a space query but we fetched CNN, filter for space keywords
-    if (query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa')) {
-      const q = query.toLowerCase();
-      const filtered = results.filter(a => 
-        a.title.toLowerCase().includes('space') || 
-        a.description.toLowerCase().includes('space') ||
-        a.title.toLowerCase().includes('nasa') ||
-        a.title.toLowerCase().includes('iss')
-      );
-      if (filtered.length > 0) results = filtered;
-    }
-    
-    if (!results || results.length === 0) {
-      console.warn('API returned no results, using fallback briefings.');
+    // 2. Default Multi-Source Engine (Merging for diversity and volume)
+    const endpoints = [
+      'https://saurav.tech/NewsAPI/everything/cnn.json',
+      'https://saurav.tech/NewsAPI/everything/bbc-news.json',
+      'https://saurav.tech/NewsAPI/top-headlines/category/technology/us.json',
+      'https://saurav.tech/NewsAPI/top-headlines/category/general/us.json'
+    ];
+
+    const results = await Promise.allSettled(
+      endpoints.map(url => axios.get(url, { timeout: 10000 }))
+    );
+
+    let allArticles = results
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => r.value.data.articles || []);
+
+    if (allArticles.length === 0) {
+      console.warn('All sources failed, using fallback.');
       return MOCK_NEWS;
     }
 
-    return results;
+    // Shuffling for freshness
+    let normalized = allArticles.map(normalizeArticle).sort(() => Math.random() - 0.5);
+
+    // Deep filtering for Space queries if requested
+    if (query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa')) {
+      const q = query.toLowerCase();
+      const filtered = normalized.filter(a => 
+        a.title.toLowerCase().includes('space') || 
+        a.description.toLowerCase().includes('space') ||
+        a.title.toLowerCase().includes('nasa') ||
+        a.title.toLowerCase().includes('starship') ||
+        a.title.toLowerCase().includes('moon') ||
+        a.title.toLowerCase().includes('iss')
+      );
+      if (filtered.length > 5) return filtered;
+    }
+
+    return normalized;
   } catch (err) {
-    console.error('News Fetch Error:', err);
+    console.error('Unified News Fetch Error:', err);
     return MOCK_NEWS;
   }
 };
+
+const normalizeArticle = (item) => ({
+  title: item.title || 'Mission Briefing Secure',
+  description: item.description || item.content || 'Detailed data stream encrypted or unavailable for this report.',
+  url: item.url || '#',
+  urlToImage: item.urlToImage || item.image_url || item.og || '',
+  source: { name: item.source?.name || item.source_id || 'Global Intel' },
+  publishedAt: item.publishedAt || item.published_at || new Date().toISOString(),
+  author: item.author || item.creator?.[0] || 'Mission Control'
+});
