@@ -110,32 +110,32 @@ export const fetchPeopleInSpace = async () => {
 };
 
 const MOCK_NEWS = [
-  { 
-    title: 'Breakthrough in US-Iran Peace Negotiations', 
-    description: 'Qatar reports a "high probability" of a peace deal aimed at ending long-standing conflict. Sources indicate a shift in regional strategy.', 
-    url: 'https://www.cnn.com', 
-    urlToImage: '', 
-    source: { name: 'CNN Intelligence' }, 
-    publishedAt: new Date().toISOString(), 
-    author: 'Mission Control' 
+  {
+    title: 'Global Quantum Communication Network Reaches Critical Milestone',
+    description: 'Researchers have successfully demonstrated long-range quantum entanglement across satellite links, paving the way for an unhackable global internet.',
+    url: '#',
+    urlToImage: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=800&auto=format&fit=crop',
+    source: { name: 'Tech Intel' },
+    publishedAt: new Date().toISOString(),
+    author: 'Dr. Sarah Chen'
   },
-  { 
-    title: '3-Day Russia-Ukraine Ceasefire Brokered', 
-    description: 'A rare pause in conflict and prisoner exchange agreed upon for 72 hours. International observers are monitoring the frontlines.', 
-    url: 'https://www.bbc.com', 
-    urlToImage: '', 
-    source: { name: 'BBC World' }, 
-    publishedAt: new Date().toISOString(), 
-    author: 'Global Desk' 
+  {
+    title: 'New Lunar Habitat Modules Arrive at Gateway Station',
+    description: 'The latest shipment of pressurized habitats has docked with the Lunar Gateway, expanding living space for upcoming Artemis surface missions.',
+    url: '#',
+    urlToImage: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=800&auto=format&fit=crop',
+    source: { name: 'NASA Space Operations' },
+    publishedAt: new Date().toISOString(),
+    author: 'Commander James Holden'
   },
-  { 
-    title: 'Victory Day Parade Scaled Back in Moscow', 
-    description: 'President Putin addresses a downsized military parade in Red Square, reaffirming objectives while noting regional tensions.', 
-    url: 'https://www.aljazeera.com', 
-    urlToImage: '', 
-    source: { name: 'Al Jazeera' }, 
-    publishedAt: new Date().toISOString(), 
-    author: 'News Analyst' 
+  {
+    title: 'Breakthrough in Fusion Energy Stability Reported',
+    description: 'A record-breaking 300-second plasma sustainment has been achieved at the international fusion reactor, bringing clean energy closer to reality.',
+    url: '#',
+    urlToImage: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?q=80&w=800&auto=format&fit=crop',
+    source: { name: 'Energy News' },
+    publishedAt: new Date().toISOString(),
+    author: 'Elena Vance'
   }
 ];
 
@@ -151,56 +151,51 @@ export const fetchNews = async (query = 'space', apiKey) => {
     author: item.author || item.creator?.[0] || 'Mission Control'
   });
 
+  const safeFetch = async (url) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) { return null; }
+  };
+
   try {
-    // 1. If API Key is provided, use dedicated providers
+    // 1. If API Key is provided
     if (apiKey && !apiKey.startsWith('your')) {
       const url = apiKey.startsWith('pub_') 
         ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
         : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
-      const data = await proxyFetch(url);
-      return (data.articles || data.results || []).map(normalize);
+      const data = await safeFetch(url);
+      if (data) return (data.articles || data.results || []).map(normalize);
     }
 
-    // 2. Primary: Multi-Source saurav.tech (Diverse & Free)
-    const endpoints = [
-      'https://saurav.tech/NewsAPI/everything/cnn.json',
+    // 2. Primary: Diverse Multi-Source (Parallel)
+    const sources = [
+      'https://saurav.tech/NewsAPI/top-headlines/category/general/us.json',
       'https://saurav.tech/NewsAPI/everything/bbc-news.json',
-      'https://saurav.tech/NewsAPI/top-headlines/category/technology/us.json'
+      'https://saurav.tech/NewsAPI/everything/cnn.json'
     ];
 
-    try {
-      const results = await Promise.allSettled(
-        endpoints.map(u => axios.get(u, { timeout: 6000 }))
-      );
-      const all = results
-        .filter(r => r.status === 'fulfilled')
-        .flatMap(r => r.value.data.articles || []);
-      
-      if (all.length > 0) {
-        let normalized = all.map(normalize).sort(() => Math.random() - 0.5);
-        if (query.toLowerCase().includes('space')) {
-          const filtered = normalized.filter(a => a.title.toLowerCase().match(/space|nasa|iss|moon|mars|starship|rocket/));
-          if (filtered.length > 3) return filtered;
-        }
-        return normalized;
-      }
-    } catch (e) { console.warn('Primary News Engine failed, shifting to secondary...'); }
+    const results = await Promise.all(sources.map(s => safeFetch(s)));
+    const all = results.filter(r => r && r.articles).flatMap(r => r.articles);
+    
+    if (all.length > 0) {
+      return all.map(normalize).sort(() => Math.random() - 0.5);
+    }
 
-    // 3. Secondary: Spaceflight News API (Very Stable)
-    try {
-      const snapi = await axios.get(`https://api.spaceflightnewsapi.net/v4/articles/?limit=15`, { timeout: 5000 });
-      if (snapi.data?.results) return snapi.data.results.map(item => ({
+    // 3. Fallback: SNAPI (Space Specific)
+    const snapi = await safeFetch('https://api.spaceflightnewsapi.net/v4/articles/?limit=20');
+    if (snapi && snapi.results) {
+      return snapi.results.map(item => ({
         ...normalize(item),
         source: { name: item.news_site || 'Space Intel' },
         urlToImage: item.image_url
       }));
-    } catch (e) { console.warn('Secondary News Engine failed, shifting to global RSS...'); }
+    }
 
-    // 4. Tertiary: Reuters via RSS-to-JSON Proxy (Last Resort)
-    try {
-      const rss = await axios.get(`https://api.rss2json.com/v1/api.json?rss_url=http%3A%2F%2Ffeeds.reuters.com%2Freuters%2FtopNews`, { timeout: 5000 });
-      if (rss.data?.items) return rss.data.items.map(normalize);
-    } catch (e) { console.error('All News Engines offline.'); }
+    // 4. Emergency: Global News via Proxy
+    const rss = await safeFetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fnews.google.com%2Frss%3Fhl%3Den-US%26gl%3DUS%26ceid%3DUS%3Aen');
+    if (rss && rss.items) return rss.items.map(normalize);
 
     return MOCK_NEWS;
   } catch (err) {
