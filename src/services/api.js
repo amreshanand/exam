@@ -139,8 +139,18 @@ const MOCK_NEWS = [
   }
 ];
 
-// News API with multiple source merging (Highly reliable & Diverse)
+// High-reliability news fetching engine with multi-stage fallback
 export const fetchNews = async (query = 'space', apiKey) => {
+  const normalize = (item) => ({
+    title: item.title || 'Mission Briefing Secure',
+    description: item.description || item.content || item.summary || 'Detailed data stream encrypted or unavailable.',
+    url: item.url || item.link || '#',
+    urlToImage: item.urlToImage || item.image_url || item.og || item.enclosure?.link || '',
+    source: { name: item.source?.name || item.source_id || 'Global Intel' },
+    publishedAt: item.publishedAt || item.published_at || item.pubDate || new Date().toISOString(),
+    author: item.author || item.creator?.[0] || 'Mission Control'
+  });
+
   try {
     // 1. If API Key is provided, use dedicated providers
     if (apiKey && !apiKey.startsWith('your')) {
@@ -148,60 +158,53 @@ export const fetchNews = async (query = 'space', apiKey) => {
         ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
         : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
       const data = await proxyFetch(url);
-      return (data.articles || data.results || []).map(normalizeArticle);
+      return (data.articles || data.results || []).map(normalize);
     }
 
-    // 2. Default Multi-Source Engine (Merging for diversity and volume)
+    // 2. Primary: Multi-Source saurav.tech (Diverse & Free)
     const endpoints = [
       'https://saurav.tech/NewsAPI/everything/cnn.json',
       'https://saurav.tech/NewsAPI/everything/bbc-news.json',
-      'https://saurav.tech/NewsAPI/top-headlines/category/technology/us.json',
-      'https://saurav.tech/NewsAPI/top-headlines/category/general/us.json'
+      'https://saurav.tech/NewsAPI/top-headlines/category/technology/us.json'
     ];
 
-    const results = await Promise.allSettled(
-      endpoints.map(url => axios.get(url, { timeout: 10000 }))
-    );
-
-    let allArticles = results
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => r.value.data.articles || []);
-
-    if (allArticles.length === 0) {
-      console.warn('All sources failed, using fallback.');
-      return MOCK_NEWS;
-    }
-
-    // Shuffling for freshness
-    let normalized = allArticles.map(normalizeArticle).sort(() => Math.random() - 0.5);
-
-    // Deep filtering for Space queries if requested
-    if (query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa')) {
-      const q = query.toLowerCase();
-      const filtered = normalized.filter(a => 
-        a.title.toLowerCase().includes('space') || 
-        a.description.toLowerCase().includes('space') ||
-        a.title.toLowerCase().includes('nasa') ||
-        a.title.toLowerCase().includes('starship') ||
-        a.title.toLowerCase().includes('moon') ||
-        a.title.toLowerCase().includes('iss')
+    try {
+      const results = await Promise.allSettled(
+        endpoints.map(u => axios.get(u, { timeout: 6000 }))
       );
-      if (filtered.length > 5) return filtered;
-    }
+      const all = results
+        .filter(r => r.status === 'fulfilled')
+        .flatMap(r => r.value.data.articles || []);
+      
+      if (all.length > 0) {
+        let normalized = all.map(normalize).sort(() => Math.random() - 0.5);
+        if (query.toLowerCase().includes('space')) {
+          const filtered = normalized.filter(a => a.title.toLowerCase().match(/space|nasa|iss|moon|mars|starship|rocket/));
+          if (filtered.length > 3) return filtered;
+        }
+        return normalized;
+      }
+    } catch (e) { console.warn('Primary News Engine failed, shifting to secondary...'); }
 
-    return normalized;
+    // 3. Secondary: Spaceflight News API (Very Stable)
+    try {
+      const snapi = await axios.get(`https://api.spaceflightnewsapi.net/v4/articles/?limit=15`, { timeout: 5000 });
+      if (snapi.data?.results) return snapi.data.results.map(item => ({
+        ...normalize(item),
+        source: { name: item.news_site || 'Space Intel' },
+        urlToImage: item.image_url
+      }));
+    } catch (e) { console.warn('Secondary News Engine failed, shifting to global RSS...'); }
+
+    // 4. Tertiary: Reuters via RSS-to-JSON Proxy (Last Resort)
+    try {
+      const rss = await axios.get(`https://api.rss2json.com/v1/api.json?rss_url=http%3A%2F%2Ffeeds.reuters.com%2Freuters%2FtopNews`, { timeout: 5000 });
+      if (rss.data?.items) return rss.data.items.map(normalize);
+    } catch (e) { console.error('All News Engines offline.'); }
+
+    return MOCK_NEWS;
   } catch (err) {
     console.error('Unified News Fetch Error:', err);
     return MOCK_NEWS;
   }
 };
-
-const normalizeArticle = (item) => ({
-  title: item.title || 'Mission Briefing Secure',
-  description: item.description || item.content || 'Detailed data stream encrypted or unavailable for this report.',
-  url: item.url || '#',
-  urlToImage: item.urlToImage || item.image_url || item.og || '',
-  source: { name: item.source?.name || item.source_id || 'Global Intel' },
-  publishedAt: item.publishedAt || item.published_at || new Date().toISOString(),
-  author: item.author || item.creator?.[0] || 'Mission Control'
-});
