@@ -110,42 +110,97 @@ export const fetchPeopleInSpace = async () => {
 };
 
 const MOCK_NEWS = [
-  { title: 'ISS Astronauts Complete Successful Spacewalk', description: 'Engineers spent 6 hours outside the station upgrading power systems.', url: '#', urlToImage: '', source: { name: 'NASA News' }, publishedAt: new Date().toISOString(), author: 'Mission Control' },
-  { title: 'SpaceX Dragon Docks with Fresh Supplies', description: 'The cargo craft brought 6,000 lbs of scientific experiments and food.', url: '#', urlToImage: '', source: { name: 'SpaceX' }, publishedAt: new Date().toISOString(), author: 'Elon Musk' },
-  { title: 'New Microgravity Study on Plant Growth', description: 'Scientists are testing how radish seeds sprout in the ISS laboratory.', url: '#', urlToImage: '', source: { name: 'Orbital Lab' }, publishedAt: new Date().toISOString(), author: 'Dr. Green' }
+  { 
+    title: 'Breakthrough in US-Iran Peace Negotiations', 
+    description: 'Qatar reports a "high probability" of a peace deal aimed at ending long-standing conflict. Sources indicate a shift in regional strategy.', 
+    url: 'https://www.cnn.com', 
+    urlToImage: '', 
+    source: { name: 'CNN Intelligence' }, 
+    publishedAt: new Date().toISOString(), 
+    author: 'Mission Control' 
+  },
+  { 
+    title: '3-Day Russia-Ukraine Ceasefire Brokered', 
+    description: 'A rare pause in conflict and prisoner exchange agreed upon for 72 hours. International observers are monitoring the frontlines.', 
+    url: 'https://www.bbc.com', 
+    urlToImage: '', 
+    source: { name: 'BBC World' }, 
+    publishedAt: new Date().toISOString(), 
+    author: 'Global Desk' 
+  },
+  { 
+    title: 'Victory Day Parade Scaled Back in Moscow', 
+    description: 'President Putin addresses a downsized military parade in Red Square, reaffirming objectives while noting regional tensions.', 
+    url: 'https://www.aljazeera.com', 
+    urlToImage: '', 
+    source: { name: 'Al Jazeera' }, 
+    publishedAt: new Date().toISOString(), 
+    author: 'News Analyst' 
+  }
 ];
 
-// News API with aggressive CORS bypass
+// News API with saurav.tech (Free, No Key, Very Reliable)
 export const fetchNews = async (query = 'space', apiKey) => {
-  if (!apiKey || apiKey.startsWith('your')) return MOCK_NEWS;
-  
   try {
-    const url = apiKey.startsWith('pub_') 
-      ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
-      : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
+    let url;
     
-    // We always try proxy for News to ensure CORS success on Vercel
-    const data = await proxyFetch(url);
+    // 1. Determine Source
+    if (apiKey && !apiKey.startsWith('your')) {
+      url = apiKey.startsWith('pub_') 
+        ? `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
+        : `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${apiKey}`;
+    } else {
+      // Use saurav.tech News API (Free, No Key, Reliable GitHub Pages host)
+      // For space queries, we use a specific category or search everything
+      const isSpace = query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa');
+      url = isSpace 
+        ? `https://saurav.tech/NewsAPI/everything/cnn.json` // We can't query directly, so we pick a high-quality source
+        : `https://saurav.tech/NewsAPI/top-headlines/category/general/us.json`;
+    }
     
-    // Normalize different API response formats
-    const results = data.articles || data.results || data.contents?.articles || data.contents?.results || [];
+    // 2. Fetch Data
+    // Saurav.tech is a static JSON host, so direct fetch is best
+    let data;
+    try {
+      const res = await axios.get(url, { timeout: 8000 });
+      data = res.data;
+    } catch (err) {
+      data = await proxyFetch(url);
+    }
+    
+    // 3. Normalize different API response formats
+    const raw = data.articles || data.results || data.contents?.articles || data.contents?.results || [];
+    
+    let results = raw.map(item => ({
+      title: item.title || 'No Title',
+      description: item.description || item.content || item.summary || 'No description available',
+      url: item.url || item.link,
+      urlToImage: item.urlToImage || item.image_url || item.og || '',
+      source: { name: item.source?.name || item.source_id || 'Global News' },
+      publishedAt: item.publishedAt || item.published_at || item.pubDate || new Date().toISOString(),
+      author: item.author || item.creator?.[0] || 'Mission Control'
+    }));
+
+    // If it's a space query but we fetched CNN, filter for space keywords
+    if (query.toLowerCase().includes('space') || query.toLowerCase().includes('nasa')) {
+      const q = query.toLowerCase();
+      const filtered = results.filter(a => 
+        a.title.toLowerCase().includes('space') || 
+        a.description.toLowerCase().includes('space') ||
+        a.title.toLowerCase().includes('nasa') ||
+        a.title.toLowerCase().includes('iss')
+      );
+      if (filtered.length > 0) results = filtered;
+    }
     
     if (!results || results.length === 0) {
       console.warn('API returned no results, using fallback briefings.');
       return MOCK_NEWS;
     }
 
-    return results.map(item => ({
-      title: item.title || 'No Title',
-      description: item.description || item.content || 'No description available',
-      url: item.url || item.link,
-      urlToImage: item.urlToImage || item.image_url,
-      source: { name: item.source?.name || item.source_id || 'Space Intelligence' },
-      publishedAt: item.publishedAt || item.pubDate || new Date().toISOString(),
-      author: item.author || item.creator?.[0] || 'Mission Control'
-    }));
+    return results;
   } catch (err) {
-    console.error('Aggressive News Fetch Error:', err);
+    console.error('News Fetch Error:', err);
     return MOCK_NEWS;
   }
 };
